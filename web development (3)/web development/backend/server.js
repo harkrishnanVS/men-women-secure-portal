@@ -12,6 +12,7 @@ console.log('IMPORT: jsonwebtoken loaded');
 const db = require('./database'); 
 console.log('IMPORT: database loaded');
 const crypto = require('crypto');
+const path = require('path');
 console.log('IMPORT: crypto loaded');
 
 const app = express();
@@ -26,7 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend files (assuming they are in the same or 'public' directory)
 // For now, let's just serve the root directory where html files are
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Utility: Authentication Middleware
 const authenticateToken = (req, res, next) => {
@@ -264,5 +265,5 @@ app.get('/api/user/appointments', authenticateToken, (req, res) => {
 // ==========================================
 app.listen(PORT, () => {
     console.log(`Backend Server running securely on http://localhost:${PORT}`);
-    console.log(`Static file paths mapping to: ${__dirname}`);
+    console.log(`Static file paths mapping to: ${path.join(__dirname, '..', 'frontend')}`);
 });

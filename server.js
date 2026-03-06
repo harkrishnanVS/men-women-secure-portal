@@ -67,12 +67,47 @@ const optionalAuthenticateToken = (req, res, next) => {
 // ROUTES: AUTHENTICATION
 // ==========================================
 
-// 1. Register (Since OTP is verified by Firebase on frontend)
-app.post('/api/auth/register', async (req, res) => {
-    const { name, mobile, password } = req.body;
+// In-memory OTP store for simulated local testing
+const otpStore = new Map();
 
-    if (!name || !mobile || !password) {
+// 1. Send Simulated OTP
+app.post('/api/auth/send-otp', async (req, res) => {
+    const { mobile } = req.body;
+    if (!mobile) return res.status(400).json({ error: 'Mobile number is required.' });
+
+    // Generate a 6 digit code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store it with a 5 minute expiry
+    otpStore.set(mobile, { otp, expires: Date.now() + 5 * 60 * 1000 });
+
+    console.log(`\n========================================`);
+    console.log(`🔥 SIMULATED OTP FOR ${mobile}: ${otp} 🔥`);
+    console.log(`========================================\n`);
+
+    // In a real app we'd trigger a Twilio/Msg91 API here
+    res.json({ message: 'OTP sent successfully (Check server terminal)' });
+});
+
+// 2. Register (Verify OTP and Create Account)
+app.post('/api/auth/register', async (req, res) => {
+    const { name, mobile, password, otp } = req.body;
+
+    if (!name || !mobile || !password || !otp) {
         return res.status(400).json({ error: 'All fields are required.' });
+    }
+
+    // Verify OTP
+    const storedOtpData = otpStore.get(mobile);
+    if (!storedOtpData) {
+        return res.status(400).json({ error: 'No OTP requested or OTP expired.' });
+    }
+    if (Date.now() > storedOtpData.expires) {
+        otpStore.delete(mobile);
+        return res.status(400).json({ error: 'OTP has expired.' });
+    }
+    if (storedOtpData.otp !== otp) {
+        return res.status(400).json({ error: 'Invalid OTP.' });
     }
 
     // Check if user exists
@@ -87,6 +122,10 @@ app.post('/api/auth/register', async (req, res) => {
                 if (err) {
                     return res.status(500).json({ error: 'Could not create account in database.' });
                 }
+                
+                // Clear OTP after successful registration
+                otpStore.delete(mobile);
+                
                 res.status(201).json({ message: 'Account Created Successfully!' });
             });
         } catch (error) {
@@ -113,11 +152,24 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// 4. Password Reset Modify (OTP verified by Firebase)
+// 4. Password Reset Modify (OTP verified by backend now)
 app.post('/api/auth/reset-password', async (req, res) => {
-    const { mobile, newPassword } = req.body;
+    const { mobile, newPassword, otp } = req.body;
 
-    if (!mobile || !newPassword) return res.status(400).json({ error: 'All fields required.' });
+    if (!mobile || !newPassword || !otp) return res.status(400).json({ error: 'All fields required.' });
+
+    // Verify OTP
+    const storedOtpData = otpStore.get(mobile);
+    if (!storedOtpData) {
+        return res.status(400).json({ error: 'No OTP requested or OTP expired.' });
+    }
+    if (Date.now() > storedOtpData.expires) {
+        otpStore.delete(mobile);
+        return res.status(400).json({ error: 'OTP has expired.' });
+    }
+    if (storedOtpData.otp !== otp) {
+        return res.status(400).json({ error: 'Invalid OTP.' });
+    }
 
     db.get('SELECT mobile FROM users WHERE mobile = ?', [mobile], async (err, user) => {
         if (err) return res.status(500).json({ error: 'Database error' });
@@ -127,6 +179,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
             const hashedPassword = await bcrypt.hash(newPassword, 10);
             db.run('UPDATE users SET password = ? WHERE mobile = ?', [hashedPassword, mobile], function (err) {
                 if (err) return res.status(500).json({ error: 'Error updating password.' });
+                
+                // Clear OTP after successful reset
+                otpStore.delete(mobile);
+                
                 res.json({ message: 'Password updated successfully.' });
             });
         } catch (e) {

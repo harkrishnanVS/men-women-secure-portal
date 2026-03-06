@@ -16,12 +16,6 @@ const auth = getAuth(app);
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    if (document.getElementById('signupForm') || document.getElementById('forgotPasswordForm')) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'invisible'
-        });
-    }
-
     // --- ROUTE PROTECTION --- //
     const isPublicPage = window.location.pathname === '/' ||
         window.location.pathname.includes('index.html') ||
@@ -84,8 +78,21 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                const phoneNumber = '+91' + mobile;
-                window.confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+                // Request simulated OTP
+                const response = await fetch('http://localhost:3000/api/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showFeedback(feedbackMsg, data.error || 'Failed to send OTP', 'error');
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
+                    return;
+                }
 
                 // Transition UI to Step 2
                 pendingUser = { name, mobile, password };
@@ -99,11 +106,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayEmail.textContent = mobile;
                 showFeedback(feedbackMsg, '', 'hidden');
 
-                showFeedback(feedbackMsg, 'Verification SMS sent. Please check your mobile.', 'success');
+                // Check terminal for code simulated message
+                showFeedback(feedbackMsg, 'Verification code sent. Please check the server terminal.', 'success');
 
             } catch (error) {
                 console.error(error);
-                showFeedback(feedbackMsg, 'Firebase Error: ' + error.message, 'error');
+                showFeedback(feedbackMsg, 'Network Error: ' + error.message, 'error');
                 submitBtn.innerHTML = originalBtnText;
                 submitBtn.disabled = false;
             }
@@ -120,12 +128,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 verifyOtpBtn.disabled = true;
 
                 try {
-                    const result = await window.confirmationResult.confirm(userOtp);
-                    // verified
+                    // Send registration Details AND the OTP to our server
                     const response = await fetch('http://localhost:3000/api/auth/register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: pendingUser.name, mobile: pendingUser.mobile, password: pendingUser.password })
+                        body: JSON.stringify({ 
+                            name: pendingUser.name, 
+                            mobile: pendingUser.mobile, 
+                            password: pendingUser.password,
+                            otp: userOtp
+                        })
                     });
 
                     const data = await response.json();
@@ -146,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 } catch (error) {
                     console.error(error);
-                    showFeedback(feedbackMsg, 'Firebase Error: ' + error.message, 'error');
+                    showFeedback(feedbackMsg, 'Network Error: ' + error.message, 'error');
                     verifyOtpBtn.innerHTML = originalBtnText;
                     verifyOtpBtn.disabled = false;
                 }
@@ -283,8 +295,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 requestEmailOtpBtn.disabled = true;
 
                 try {
-                    const phoneNumber = '+91' + recoveryMobile;
-                    window.confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+                    // Request simulated OTP
+                    const response = await fetch('http://localhost:3000/api/auth/send-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mobile: recoveryMobile })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        showFeedback(resetFeedback, data.error || 'Failed to send OTP', 'error');
+                        requestEmailOtpBtn.innerHTML = originalText;
+                        requestEmailOtpBtn.disabled = false;
+                        return;
+                    }
 
                     requestEmailOtpBtn.innerHTML = originalText;
                     requestEmailOtpBtn.disabled = false;
@@ -294,11 +319,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateProgress(1); // Move to step 2
 
                     displayResetEmail.textContent = recoveryMobile;
-                    resetSubtitle.textContent = 'Check your mobile for the verification code.';
+                    resetSubtitle.textContent = 'Check terminal for verification code.';
                     showFeedback(resetFeedback, '', 'hidden');
 
                     // SMS sent successfully!
-                    showFeedback(resetFeedback, 'Recovery SMS sent successfully.', 'success');
+                    showFeedback(resetFeedback, 'Recovery OTP generated successfully.', 'success');
 
                 } catch (error) {
                     console.error(error);
@@ -319,7 +344,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 verifyEmailOtpBtn.disabled = true;
 
                 try {
-                    const result = await window.confirmationResult.confirm(enteredOtp);
+                    // We just test if it's 6 digits for the frontend part and defer the complex verify to saveNewPassword route
+                    if(enteredOtp.length !== 6) {
+                        showFeedback(resetFeedback, 'Please enter a 6-digit OTP.', 'error');
+                        verifyEmailOtpBtn.innerHTML = originalText;
+                        verifyEmailOtpBtn.disabled = false;
+                        return;
+                    }
+                    
                     verifyEmailOtpBtn.innerHTML = originalText;
                     verifyEmailOtpBtn.disabled = false;
 
@@ -369,13 +401,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch('http://localhost:3000/api/auth/reset-password', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mobile: recoveryMobile, newPassword })
+                        body: JSON.stringify({ mobile: recoveryMobile, newPassword, otp: enteredOtp })
                     });
 
                     const data = await response.json();
 
                     if (!response.ok) {
-                        showFeedback(resetFeedback, data.error || 'Error updating password.', 'error');
+                        showFeedback(resetFeedback, data.error || 'Error updating password. Invalid OTP?', 'error');
                         saveNewPasswordBtn.innerHTML = originalText;
                         saveNewPasswordBtn.disabled = false;
                         return;

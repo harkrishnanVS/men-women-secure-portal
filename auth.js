@@ -1,6 +1,26 @@
-// Simple mock authentication using localStorage for demonstration purposes.
+// Firebase Modular SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyA2pMFUi3c8DmYZa1qdoZRjlQfPcCp2-uw",
+    authDomain: "women-and-child-safety-4cc09.firebaseapp.com",
+    projectId: "women-and-child-safety-4cc09",
+    storageBucket: "women-and-child-safety-4cc09.firebasestorage.app",
+    messagingSenderId: "72111676289",
+    appId: "1:72111676289:web:5c803e2f2566f71457a680"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    if (document.getElementById('signupForm') || document.getElementById('forgotPasswordForm')) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible'
+        });
+    }
 
     // --- ROUTE PROTECTION --- //
     const isPublicPage = window.location.pathname === '/' ||
@@ -46,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
         signupForm.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const name = document.getElementById('signupName').value;
-            const email = document.getElementById('signupEmail').value;
+            const name = document.getElementById('signupName').value.trim();
+            const mobile = document.getElementById('signupMobile').value.trim();
             const password = document.getElementById('signupPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const feedbackMsg = document.getElementById('signupFeedback');
@@ -64,24 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:3000/api/auth/register-request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    showFeedback(feedbackMsg, data.error || 'Registration request failed.', 'error');
-                    submitBtn.innerHTML = originalBtnText;
-                    submitBtn.disabled = false;
-                    return;
-                }
+                const phoneNumber = '+91' + mobile;
+                window.confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
 
                 // Transition UI to Step 2
-                pendingUser = { email }; // Only strictly need email for verification
-                expectedOtp = data.mockOtp; // Taking mock OTP from backend response
+                pendingUser = { name, mobile, password };
 
                 submitBtn.innerHTML = originalBtnText;
                 submitBtn.disabled = false;
@@ -89,15 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 signupStep2.classList.remove('hidden');
 
                 // Update UI text
-                displayEmail.textContent = email;
+                displayEmail.textContent = mobile;
                 showFeedback(feedbackMsg, '', 'hidden');
 
-                // Simulate Email delivery via browser alert
-                alert(`MOCK EMAIL:\nTo: ${email}\nSubject: TN Portal Verification\n\nYour OTP is: ${expectedOtp}\nDo not share this with anyone.`);
+                showFeedback(feedbackMsg, 'Verification SMS sent. Please check your mobile.', 'success');
 
             } catch (error) {
                 console.error(error);
-                showFeedback(feedbackMsg, 'Network error. Please try again.', 'error');
+                showFeedback(feedbackMsg, 'Firebase Error: ' + error.message, 'error');
                 submitBtn.innerHTML = originalBtnText;
                 submitBtn.disabled = false;
             }
@@ -114,10 +120,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 verifyOtpBtn.disabled = true;
 
                 try {
-                    const response = await fetch('http://localhost:3000/api/auth/register-verify', {
+                    const result = await window.confirmationResult.confirm(userOtp);
+                    // verified
+                    const response = await fetch('http://localhost:3000/api/auth/register', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: pendingUser.email, otp: userOtp })
+                        body: JSON.stringify({ name: pendingUser.name, mobile: pendingUser.mobile, password: pendingUser.password })
                     });
 
                     const data = await response.json();
@@ -138,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 } catch (error) {
                     console.error(error);
-                    showFeedback(feedbackMsg, 'Network error. Please try again.', 'error');
+                    showFeedback(feedbackMsg, 'Firebase Error: ' + error.message, 'error');
                     verifyOtpBtn.innerHTML = originalBtnText;
                     verifyOtpBtn.disabled = false;
                 }
@@ -148,10 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Resend OTP
         if (resendOtpBtn) {
             resendOtpBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                expectedOtp = String(Math.floor(1000 + Math.random() * 9000));
-                alert(`MOCK EMAIL:\nTo: ${pendingUser.email}\nSubject: TN Portal Verification (Resend)\n\nYour NEW OTP is: ${expectedOtp}\nDo not share this with anyone.`);
-                showFeedback(document.getElementById('signupFeedback'), 'A new OTP has been sent to your email.', 'success');
+                // We'll just alert that they need to request a new OTP from the server if they didn't get it
+                // Actually, let's just show feedback to click the initial sign up again or we would need a resend route.
+                showFeedback(document.getElementById('signupFeedback'), 'To resend, please refresh and submit the form again.', 'error');
             });
         }
     }
@@ -166,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginForm.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const email = document.getElementById('loginEmail').value;
+            const mobile = document.getElementById('loginMobile').value.trim();
             const password = document.getElementById('loginPassword').value;
             const feedbackMsg = document.getElementById('loginFeedback');
             const submitBtn = document.getElementById('loginBtn');
@@ -179,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('http://localhost:3000/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ mobile, password })
                 });
 
                 const data = await response.json();
@@ -262,12 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Step 1: Request OTP via Email
+        // Step 1: Request OTP via Mobile
         if (requestEmailOtpBtn) {
             requestEmailOtpBtn.addEventListener('click', async () => {
-                recoveryEmail = document.getElementById('resetEmail').value.trim();
-                if (!recoveryEmail || !recoveryEmail.includes('@')) {
-                    showFeedback(resetFeedback, 'Please enter a valid email address.', 'error');
+                recoveryMobile = document.getElementById('resetMobile').value.trim();
+                if (!/^[0-9]{10}$/.test(recoveryMobile)) {
+                    showFeedback(resetFeedback, 'Please enter a valid 10-digit mobile number.', 'error');
                     return;
                 }
 
@@ -276,22 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 requestEmailOtpBtn.disabled = true;
 
                 try {
-                    const response = await fetch('http://localhost:3000/api/auth/forgot-password-request', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: recoveryEmail })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        showFeedback(resetFeedback, data.error || 'Server error.', 'error');
-                        requestEmailOtpBtn.innerHTML = originalText;
-                        requestEmailOtpBtn.disabled = false;
-                        return;
-                    }
-
-                    recoveryOtp = data.mockOtp;
+                    const phoneNumber = '+91' + recoveryMobile;
+                    window.confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
 
                     requestEmailOtpBtn.innerHTML = originalText;
                     requestEmailOtpBtn.disabled = false;
@@ -300,11 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     resetStep2.classList.remove('hidden');
                     updateProgress(1); // Move to step 2
 
-                    displayResetEmail.textContent = recoveryEmail;
-                    resetSubtitle.textContent = 'Check your email for the verification code.';
+                    displayResetEmail.textContent = recoveryMobile;
+                    resetSubtitle.textContent = 'Check your mobile for the verification code.';
                     showFeedback(resetFeedback, '', 'hidden');
 
-                    alert(`MOCK EMAIL:\nTo: ${recoveryEmail}\nSubject: TN Portal Password Reset\n\nYour Password Reset OTP is: ${recoveryOtp}`);
+                    // SMS sent successfully!
+                    showFeedback(resetFeedback, 'Recovery SMS sent successfully.', 'success');
 
                 } catch (error) {
                     console.error(error);
@@ -317,26 +311,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Step 2: Verify OTP
         if (verifyEmailOtpBtn) {
-            verifyEmailOtpBtn.addEventListener('click', () => {
+            verifyEmailOtpBtn.addEventListener('click', async () => {
                 const enteredOtp = document.getElementById('resetOtpInput').value.trim();
 
-                if (enteredOtp === recoveryOtp) {
-                    const originalText = verifyEmailOtpBtn.innerHTML;
-                    verifyEmailOtpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
-                    verifyEmailOtpBtn.disabled = true;
+                const originalText = verifyEmailOtpBtn.innerHTML;
+                verifyEmailOtpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+                verifyEmailOtpBtn.disabled = true;
 
-                    setTimeout(() => {
-                        verifyEmailOtpBtn.innerHTML = originalText;
-                        verifyEmailOtpBtn.disabled = false;
+                try {
+                    const result = await window.confirmationResult.confirm(enteredOtp);
+                    verifyEmailOtpBtn.innerHTML = originalText;
+                    verifyEmailOtpBtn.disabled = false;
 
-                        resetStep2.classList.add('hidden');
-                        resetStep3.classList.remove('hidden');
-                        updateProgress(2); // Move to step 3
+                    resetStep2.classList.add('hidden');
+                    resetStep3.classList.remove('hidden');
+                    updateProgress(2); // Move to step 3
 
-                        resetSubtitle.textContent = 'Create a new, strong password.';
-                        showFeedback(resetFeedback, '', 'hidden');
-                    }, 800);
-                } else {
+                    resetSubtitle.textContent = 'Create a new, strong password.';
+                    showFeedback(resetFeedback, '', 'hidden');
+                } catch (error) {
+                    verifyEmailOtpBtn.innerHTML = originalText;
+                    verifyEmailOtpBtn.disabled = false;
                     showFeedback(resetFeedback, 'Invalid OTP! Please try again.', 'error');
                 }
             });
@@ -346,9 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resendEmailOtpBtn) {
             resendEmailOtpBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                recoveryOtp = String(Math.floor(1000 + Math.random() * 9000));
-                alert(`MOCK EMAIL:\nTo: ${recoveryEmail}\nSubject: TN Portal Password Reset\n\nYour NEW Password Reset OTP is: ${recoveryOtp}`);
-                showFeedback(resetFeedback, 'A new OTP has been sent to your email.', 'success');
+                showFeedback(resetFeedback, 'To resend, please refresh and try again.', 'error');
             });
         }
 
@@ -376,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch('http://localhost:3000/api/auth/reset-password', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: recoveryEmail, otp: enteredOtp, newPassword })
+                        body: JSON.stringify({ mobile: recoveryMobile, newPassword })
                     });
 
                     const data = await response.json();

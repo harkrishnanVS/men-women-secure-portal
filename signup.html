@@ -54,11 +54,11 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="signupEmail">Email Address (மின்னஞ்சல்) *</label>
+                        <label for="signupMobile">Mobile Number (தொலைபேசி எண்) *</label>
                         <div class="input-icon-wrapper">
-                            <i class="fas fa-envelope"></i>
-                            <input type="email" id="signupEmail" name="signupEmail" required
-                                placeholder="Enter your email">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="signupMobile" name="signupMobile" required
+                                placeholder="Enter your 10-digit mobile number" pattern="[0-9]{10}" maxlength="10">
                         </div>
                     </div>
 
@@ -88,24 +88,27 @@
                             *</label>
                     </div>
 
+                    <div id="recaptcha-container" style="margin-bottom: 15px; display: flex; justify-content: center;">
+                    </div>
+
                     <button type="submit" class="btn btn-submit" id="signupBtn">Request OTP (OTP பெறுக)</button>
                 </div> <!-- End Step 1 -->
 
                 <!-- STEP 2: OTP Verification (Initially Hidden) -->
                 <div id="signupStep2" class="hidden">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <i class="fas fa-envelope-open-text"
+                        <i class="fas fa-sms"
                             style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 10px;"></i>
-                        <h4>Verify Email Address</h4>
-                        <p style="font-size: 0.9rem; color: var(--text-light);">We've sent a 4-digit OTP to your email
-                            address: <br><strong id="displayEmail"
+                        <h4>Verify Mobile Number</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-light);">We've sent a 6-digit OTP to your mobile
+                            number: <br><strong id="displayEmail"
                                 style="font-size: 1.1rem; color: var(--primary-color);"></strong></p>
                     </div>
 
                     <div class="form-group" style="text-align: center;">
-                        <label for="otpInput">Enter 4-Digit OTP (குறியீட்டு எண்)</label>
-                        <input type="text" id="otpInput" name="otpInput" placeholder="&#9679; &#9679; &#9679; &#9679;"
-                            maxlength="4"
+                        <label for="otpInput">Enter 6-Digit OTP (குறியீட்டு எண்)</label>
+                        <input type="text" id="otpInput" name="otpInput"
+                            placeholder="&#9679; &#9679; &#9679; &#9679; &#9679; &#9679;" maxlength="6"
                             style="font-size: 2rem; letter-spacing: 15px; text-align: center; padding: 15px; margin-top: 10px; font-weight: bold; width: 60%; display: inline-block;">
                     </div>
 
@@ -135,7 +138,7 @@
         </div>
     </footer>
 
-    <script src="auth.js"></script>
+    <script type="module" src="auth.js"></script>
 </body>
 
 </html>

@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="bot-info">
                         <i class="fas fa-robot bot-icon"></i>
                         <div>
-                            <h4>TN Sahaya Bot</h4>
+                            <h4>TN Sakthi Bot</h4>
                             <span class="status-indicator">Online</span>
                         </div>
                     </div>
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 <div id="tnChatbotMessages" class="chatbot-messages">
                     <div class="message bot-message">
-                        Vanakam! 🙏 I am Hari, the TN Portal Assistant. How can I help you today?
+                        Vanakam! 🙏 I am Sakthi, the TN Portal Assistant. How can I help you today?
                         <br><br>You can ask me about:
                         <ul>
                             <li>How to register a complaint</li>
@@ -104,32 +104,108 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
     }
 
-    // 6. Simple Keyword-Based Conversation Engine
-    function getBotResponse(input) {
-        if (input.includes('register') || input.includes('complaint') || input.includes('report')) {
-            return `To register a complaint, click the "Report an Incident" button on the <a href="index.html" style="color:white; text-decoration:underline;">main page</a>. You must create an account first to securely track it, but you have the option to hide your identity in the form!`;
+    // 6. Comprehensive Keyword-Based Conversation Engine
+    function getBotResponse(rawInput) {
+        const input = rawInput.toLowerCase();
+
+        // Greetings
+        if (input.match(/\b(hi|hello|hey|vanakkam|namaste|morning|evening|afternoon)\b/)) {
+            return `Hello! Vanakkam 🙏. I am Sakthi, the TN Assistant. I can help you with:
+            <ul>
+                <li>Filing a complaint securely</li>
+                <li>Tracking your case status</li>
+                <li>Booking a counseling session</li>
+                <li>Privacy and safety rules</li>
+            </ul>
+            How may I assist you today?`;
         }
-        else if (input.includes('safe') || input.includes('anonymous') || input.includes('privacy')) {
-            return `Your safety is our priority. You can check the "Make my complaint Anonymous" box on the reporting form. We will only share details with authorized police personnel.`;
+
+        // Emergency
+        else if (input.match(/\b(emergency|help|danger|save|police|100|181|1098|call|suicide|urgent)\b/)) {
+            return `🚨 <strong>Emergency Numbers for Tamil Nadu:</strong><br>
+            <ul>
+                <li><strong>100 / 112</strong>: Police Control Room</li>
+                <li><strong>181</strong>: Women Helpline</li>
+                <li><strong>1098</strong>: Child Helpline</li>
+                <li><strong>1930</strong>: Cyber Crime Helpline</li>
+            </ul>
+            If you are in immediate physical danger, please call 100 right away!`;
         }
-        else if (input.includes('emergency') || input.includes('help') || input.includes('call') || input.includes('number')) {
-            return `🚨 For immediate emergencies in Tamil Nadu, call:<br>
-                    <strong>100</strong> (Police)<br>
-                    <strong>181</strong> (Women Helpline)<br>
-                    <strong>1098</strong> (Child Helpline)<br>
-                    <strong>1930</strong> (Cyber Crime)`;
+
+        // Registration & Login
+        else if (input.match(/\b(register|sign up|create account|join|otp|verify email)\b/)) {
+            return `To register, click <strong>"Sign Up"</strong> on the top right of the main page. You will need to provide your Name, Email, and create a Password (minimum 6 characters). We will send a 4-digit OTP to your email to verify your account securely.`;
         }
-        else if (input.includes('counsel') || input.includes('trauma') || input.includes('doctor') || input.includes('therapy')) {
-            return `We offer free, confidential trauma recovery counseling with Govt. Specialists. You can book an online or in-person session under the "Trauma Recovery Counseling" section in your <a href="dashboard.html" style="color:white; text-decoration:underline;">Dashboard</a>.`;
+        else if (input.match(/\b(login|sign in|forgot password|reset password|can't login)\b/)) {
+            return `You can login using your registered Email and Password. If you forgot your password, click the <strong>"Forgot Password?"</strong> link on the Login page to reset it.`;
         }
-        else if (input.includes('hi') || input.includes('hello') || input.includes('vanakkam')) {
-            return `Hello! Vanakkam 🙏. I am the TN Assistant. Ask me how to file a complaint, about privacy guarantees, or emergency contacts.`;
+
+        // Complaint Process & Anonymity
+        else if (input.match(/\b(anonymous|hide name|secret|identity)\b/)) {
+            return `Yes! You can file a complaint anonymously. On the complaint form, simply check the box that says <strong>"I wish to keep my identity anonymous"</strong>. Your name and contact will be hidden and the system will generate a secure "Anonymous_User_ID" for tracking.`;
         }
-        else if (input.includes('track') || input.includes('status')) {
-            return `You can track the status of all your submitted complaints securely on your personal <a href="dashboard.html" style="color:white; text-decoration:underline;">Dashboard</a>.`;
+        else if (input.match(/\b(file|complaint|report|submit|how to complain)\b/)) {
+            return `To file a complaint:
+            <ol>
+                <li>Login to your account.</li>
+                <li>Click <strong>"Report Now"</strong> or <strong>"New Complaint"</strong>.</li>
+                <li>Fill in the incident date, time, district, and exact location.</li>
+                <li>Describe the incident in detail.</li>
+                <li>Upload any evidence (max 10MB).</li>
+                <li>Submit to receive your 10-digit Tracking Reference ID.</li>
+            </ol>`;
         }
+
+        // Evidence
+        else if (input.match(/\b(evidence|upload|photo|video|audio|document|proof|size limit|10mb)\b/)) {
+            return `You can upload evidence to support your complaint. We accept Images, Videos, Audio recordings, and Documents (.pdf, .doc, .docx). The maximum total file size allowed is <strong>10MB</strong>.`;
+        }
+
+        // Tracking & Status
+        else if (input.match(/\b(track|status|progress|reference id|tn-)\b/)) {
+            return `You can track your complaint using your 10-digit Reference ID (e.g., TN-123456).<br>
+            <br>
+            Click <strong>"Track Status"</strong> on the home page or view it directly in your <a href="dashboard.html" style="color:var(--primary-color); text-decoration:underline;">Dashboard</a>. The statuses are typically: <em>Under Review</em>, <em>Assigned to Inspector</em>, and <em>Action Initiated</em>.`;
+        }
+
+        // Counseling
+        else if (input.match(/\b(counseling|therapy|doctor|trauma|psychologist|mental health|session|stress|fear)\b/)) {
+            return `We offer <strong>free, confidential trauma recovery counseling</strong> with Government Certified Specialists.
+            <br><br>
+            In your Dashboard, you can book an appointment for:
+            <ul>
+                <li>Online Video Call</li>
+                <li>Audio Call</li>
+                <li>In-Person session</li>
+            </ul>
+            Doctors include Clinical Psychologists and Trauma Specialists.`;
+        }
+
+        // Privacy & Security & Terms
+        else if (input.match(/\b(privacy|safe|secure|data|protect|who can see|hack|leak)\b/)) {
+            return `Your data is strictly confidential. Uploaded files are encrypted, and access is restricted by Role-Based Access Control. We do not sell or share data for marketing. Read our full <a href="privacy.html" style="color:var(--primary-color); text-decoration:underline;">Privacy Policy</a>.`;
+        }
+        else if (input.match(/\b(false|fake|punish|terms|misuse|lie|illegal)\b/)) {
+            return `The platform is for genuine cases. Submitting false, malicious, or fake complaints is a violation of our Terms of Use and may result in your account being blocked and potential legal action. Please use the platform responsibly.`;
+        }
+
+        // Dashboard & Navigation
+        else if (input.match(/\b(dashboard|profile|my account|home)\b/)) {
+            return `Your <a href="dashboard.html" style="color:var(--primary-color); text-decoration:underline;">Dashboard</a> is your central hub. There, you can view your submitted complaints, check their status, and book or view upcoming counseling sessions.`;
+        }
+
+        // Catch-all
         else {
-            return `I'm sorry, I'm just a simple assistant and didn't quite understand. Could you rephrase? You can ask about "registering a complaint", "emergency numbers", or "counseling booking". For immediate physical danger, please call 100.`;
+            return `I'm sorry, I'm just a simple assistant and didn't quite understand. Could you rephrase your question?
+            <br><br>
+            You can ask me about:
+            <ul>
+                <li>"How to register a complaint"</li>
+                <li>"How to track my case"</li>
+                <li>"How to book counseling"</li>
+                <li>"Emergency numbers"</li>
+            </ul>
+            For immediate physical danger, please call <strong>100</strong>.`;
         }
     }
 });

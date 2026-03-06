@@ -920,3 +920,300 @@ legend {
         margin-bottom: 10px;
     }
 }
+
+/* --- Chatbot Widget Styles (Mid-Left Position) --- */
+.chatbot-widget {
+    position: fixed;
+    top: 50%;
+    left: 20px;
+    /* Position on the left */
+    transform: translateY(-50%);
+    /* Centered vertically */
+    z-index: 9999;
+}
+
+.chatbot-toggle-btn {
+    background-color: var(--primary-color);
+    color: var(--white);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    position: relative;
+    outline: none;
+}
+
+.chatbot-toggle-btn:hover {
+    background-color: var(--primary-light);
+    transform: scale(1.1);
+}
+
+.chatbot-toggle-btn .tooltip-text {
+    visibility: hidden;
+    background-color: var(--text-color);
+    color: var(--white);
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px 10px;
+    position: absolute;
+    z-index: 10000;
+    left: calc(100% + 15px);
+    /* Show on the right of the button */
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.chatbot-toggle-btn .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    /* Arrow on the left of tooltip */
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent var(--text-color) transparent transparent;
+}
+
+.chatbot-toggle-btn:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Chat Window */
+.chatbot-window {
+    position: absolute;
+    top: 50%;
+    /* Center relatively to the widget */
+    left: 80px;
+    /* Open to the right of the button */
+    width: 350px;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 450px;
+    transform-origin: left center;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid var(--border-color);
+}
+
+.chatbot-window.hidden {
+    display: none;
+}
+
+.chatbot-window.slide-up {
+    animation: chatSlideInLeft 0.3s forwards;
+}
+
+@keyframes chatSlideInLeft {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.5) translateX(-50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1) translateX(0);
+    }
+}
+
+.chatbot-header {
+    background-color: var(--primary-color);
+    color: var(--white);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chatbot-header .bot-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bot-icon {
+    font-size: 1.8rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.chatbot-header h4 {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.status-indicator {
+    font-size: 0.8rem;
+    color: #a3e4d7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-indicator::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #2ecc71;
+    border-radius: 50%;
+}
+
+.close-chat-btn {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.close-chat-btn:hover {
+    color: #f1c40f;
+    transform: rotate(90deg);
+}
+
+.chatbot-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.bot-message {
+    align-self: flex-start;
+    background-color: var(--white);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-bottom-left-radius: 2px;
+}
+
+.bot-message ul {
+    margin-top: 5px;
+    margin-left: 20px;
+    font-size: 0.9rem;
+}
+
+.bot-message li {
+    margin-bottom: 4px;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border-bottom-right-radius: 2px;
+}
+
+.chatbot-input-area {
+    padding: 15px;
+    background-color: var(--white);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+}
+
+#tnChatbotInput {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.3s;
+}
+
+#tnChatbotInput:focus {
+    border-color: var(--primary-color);
+}
+
+#tnChatbotSendBtn {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+#tnChatbotSendBtn:hover {
+    background-color: #d18a0e;
+    transform: scale(1.05);
+}
+
+.typing-animation {
+    color: var(--text-light);
+    animation: typingPulse 1.5s infinite;
+}
+
+@keyframes typingPulse {
+    0% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.3;
+    }
+}
+
+/* Specific fix for smaller mobile screens */
+@media (max-width: 480px) {
+    .chatbot-window {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        transform: translateY(0);
+        width: 100%;
+        height: 80vh;
+        /* take up most of screen */
+        border-radius: 20px 20px 0 0;
+        transform-origin: bottom center;
+    }
+
+    .chatbot-widget {
+        top: auto;
+        bottom: 20px;
+        /* Reset for mobile back to bottom left maybe, or keep middle */
+        transform: translateY(0);
+    }
+}

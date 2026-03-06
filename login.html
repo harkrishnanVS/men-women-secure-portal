@@ -42,10 +42,11 @@
 
             <form id="loginForm" class="auth-form">
                 <div class="form-group">
-                    <label for="loginEmail">Email Address (மின்னஞ்சல்) *</label>
+                    <label for="loginMobile">Mobile Number (தொலைபேசி எண்) *</label>
                     <div class="input-icon-wrapper">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="loginEmail" name="loginEmail" required placeholder="Enter your email">
+                        <i class="fas fa-phone"></i>
+                        <input type="tel" id="loginMobile" name="loginMobile" required
+                            placeholder="Enter your mobile number">
                     </div>
                 </div>
 
@@ -81,7 +82,7 @@
         </div>
     </footer>
 
-    <script src="auth.js"></script>
+    <script type="module" src="auth.js"></script>
 </body>
 
 </html>

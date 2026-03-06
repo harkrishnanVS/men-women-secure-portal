@@ -24,7 +24,7 @@ function initializeDatabase() {
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
+                mobile TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -35,7 +35,7 @@ function initializeDatabase() {
             CREATE TABLE IF NOT EXISTS complaints (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tracking_id TEXT UNIQUE NOT NULL,
-                user_email TEXT,
+                user_mobile TEXT,
                 type TEXT NOT NULL,
                 location TEXT NOT NULL,
                 date TEXT NOT NULL,
@@ -43,7 +43,7 @@ function initializeDatabase() {
                 evidence TEXT, -- file path or base64
                 status TEXT DEFAULT 'Pending Review',
                 submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_email) REFERENCES users(email)
+                FOREIGN KEY(user_mobile) REFERENCES users(mobile)
             )
         `);
 
@@ -51,13 +51,13 @@ function initializeDatabase() {
         db.run(`
             CREATE TABLE IF NOT EXISTS appointments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_email TEXT NOT NULL,
+                user_mobile TEXT NOT NULL,
                 counselor TEXT NOT NULL,
                 date TEXT NOT NULL,
                 time TEXT NOT NULL,
                 status TEXT DEFAULT 'Confirmed',
                 booked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_email) REFERENCES users(email)
+                FOREIGN KEY(user_mobile) REFERENCES users(mobile)
             )
         `);
 

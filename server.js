@@ -9,10 +9,12 @@ const bcrypt = require('bcryptjs');
 console.log('IMPORT: bcryptjs loaded');
 const jwt = require('jsonwebtoken');
 console.log('IMPORT: jsonwebtoken loaded');
-const db = require('./database'); 
+const db = require('./database');
 console.log('IMPORT: database loaded');
 const crypto = require('crypto');
 console.log('IMPORT: crypto loaded');
+const nodemailer = require('nodemailer');
+console.log('IMPORT: nodemailer loaded');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,117 +67,72 @@ const optionalAuthenticateToken = (req, res, next) => {
 // ROUTES: AUTHENTICATION
 // ==========================================
 
-// In-memory mock storage for temporary OTPs until verified
-const pendingVerifications = new Map();
+// 1. Register (Since OTP is verified by Firebase on frontend)
+app.post('/api/auth/register', async (req, res) => {
+    const { name, mobile, password } = req.body;
 
-// 1. Register Request (Sends mock OTP)
-app.post('/api/auth/register-request', async (req, res) => {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
+    if (!name || !mobile || !password) {
         return res.status(400).json({ error: 'All fields are required.' });
     }
 
     // Check if user exists
-    db.get('SELECT email FROM users WHERE email = ?', [email], async (err, row) => {
+    db.get('SELECT mobile FROM users WHERE mobile = ?', [mobile], async (err, row) => {
         if (err) return res.status(500).json({ error: 'Database error' });
-        if (row) return res.status(400).json({ error: 'Email is already registered.' });
+        if (row) return res.status(400).json({ error: 'Mobile number is already registered.' });
 
         try {
             const hashedPassword = await bcrypt.hash(password, 10);
-            const expectedOtp = Math.floor(1000 + Math.random() * 9000).toString();
 
-            // Store pending user
-            pendingVerifications.set(email, { name, email, password: hashedPassword, expectedOtp });
-
-            // In a real app we would send the email here
-            console.log(`MOCK EMAIL SENT TO ${email}: OTP is ${expectedOtp}`);
-
-            res.json({ message: 'OTP sent to email.', mockOtp: expectedOtp }); // Sending mockOtp for frontend dev UI
+            db.run('INSERT INTO users (name, mobile, password) VALUES (?, ?, ?)', [name, mobile, hashedPassword], function (err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Could not create account in database.' });
+                }
+                res.status(201).json({ message: 'Account Created Successfully!' });
+            });
         } catch (error) {
-            res.status(500).json({ error: 'Error generating request' });
+            console.error('Error generating request:', error);
+            res.status(500).json({ error: 'Server error generating request' });
         }
-    });
-});
-
-// 2. Register Verify (Creates user)
-app.post('/api/auth/register-verify', (req, res) => {
-    const { email, otp } = req.body;
-    const pendingDetails = pendingVerifications.get(email);
-
-    if (!pendingDetails) {
-        return res.status(400).json({ error: 'No pending registration found.' });
-    }
-    if (pendingDetails.expectedOtp !== otp) {
-        return res.status(400).json({ error: 'Invalid OTP.' });
-    }
-
-    const { name, password } = pendingDetails;
-
-    // Insert to DB
-    db.run('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', [name, email, password], function (err) {
-        if (err) {
-            return res.status(500).json({ error: 'Could not create account in database.' });
-        }
-        pendingVerifications.delete(email);
-        res.status(201).json({ message: 'Account Created Successfully!' });
     });
 });
 
 // 3. Login
 app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
+    const { mobile, password } = req.body;
 
-    db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
+    db.get('SELECT * FROM users WHERE mobile = ?', [mobile], async (err, user) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(401).json({ error: 'Invalid credentials.' });
 
-        const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '2h' });
+        const token = jwt.sign({ id: user.id, mobile: user.mobile, name: user.name }, JWT_SECRET, { expiresIn: '2h' });
 
-        res.json({ message: 'Login successful', token, name: user.name, email: user.email });
+        res.json({ message: 'Login successful', token, name: user.name, mobile: user.mobile });
     });
 });
 
-// 4. Forgot Password Request
-app.post('/api/auth/forgot-password-request', (req, res) => {
-    const { email } = req.body;
-
-    db.get('SELECT email FROM users WHERE email = ?', [email], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Database error' });
-        if (!user) return res.status(404).json({ error: 'Email not registered.' });
-
-        const expectedOtp = Math.floor(1000 + Math.random() * 9000).toString();
-        pendingVerifications.set(email + '_reset', { expectedOtp });
-
-        console.log(`MOCK EMAIL SENT TO ${email}: Reset OTP is ${expectedOtp}`);
-
-        res.json({ message: 'Reset OTP sent to email.', mockOtp: expectedOtp });
-    });
-});
-
-// 5. Password Reset Modify
+// 4. Password Reset Modify (OTP verified by Firebase)
 app.post('/api/auth/reset-password', async (req, res) => {
-    const { email, otp, newPassword } = req.body;
-    const pendingReset = pendingVerifications.get(email + '_reset');
+    const { mobile, newPassword } = req.body;
 
-    if (!pendingReset || pendingReset.expectedOtp !== otp) {
-        return res.status(400).json({ error: 'Invalid or expired OTP.' });
-    }
+    if (!mobile || !newPassword) return res.status(400).json({ error: 'All fields required.' });
 
-    try {
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        db.run('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email], function (err) {
-            if (err) return res.status(500).json({ error: 'Error updating password.' });
+    db.get('SELECT mobile FROM users WHERE mobile = ?', [mobile], async (err, user) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!user) return res.status(404).json({ error: 'Mobile number not registered.' });
 
-            pendingVerifications.delete(email + '_reset');
-            res.json({ message: 'Password updated successfully.' });
-        });
-    } catch (e) {
-        res.status(500).json({ error: 'Internal server error.' });
-    }
+        try {
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            db.run('UPDATE users SET password = ? WHERE mobile = ?', [hashedPassword, mobile], function (err) {
+                if (err) return res.status(500).json({ error: 'Error updating password.' });
+                res.json({ message: 'Password updated successfully.' });
+            });
+        } catch (e) {
+            res.status(500).json({ error: 'Internal server error.' });
+        }
+    });
 });
 
 
@@ -185,9 +142,9 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
 // 1. Submit a generic complaint
 app.post('/api/complaints', optionalAuthenticateToken, (req, res) => {
-    // Note: This API accepts non-authenticated requests for anonymity if needed, but attaches email if user is authenticated
+    // Note: This API accepts non-authenticated requests for anonymity if needed, but attaches mobile if user is authenticated
     const { type, location, date, description } = req.body;
-    const user_email = req.user ? req.user.email : null;
+    const user_mobile = req.user ? req.user.mobile : null;
     const trackingId = crypto.randomUUID().slice(0, 10).toUpperCase();
 
     // Verify fields
@@ -196,8 +153,8 @@ app.post('/api/complaints', optionalAuthenticateToken, (req, res) => {
     }
 
     db.run(
-        'INSERT INTO complaints (tracking_id, user_email, type, location, date, description) VALUES (?, ?, ?, ?, ?, ?)',
-        [trackingId, user_email, type, location, date, description],
+        'INSERT INTO complaints (tracking_id, user_mobile, type, location, date, description) VALUES (?, ?, ?, ?, ?, ?)',
+        [trackingId, user_mobile, type, location, date, description],
         function (err) {
             if (err) return res.status(500).json({ error: 'Failed to submit complaint.' });
             res.status(201).json({ message: 'Complaint filed securely.', tracking_id: trackingId });
@@ -218,8 +175,8 @@ app.get('/api/complaints/:trackingId', (req, res) => {
 
 // 3. User's specific complaints (Protected)
 app.get('/api/user/complaints', authenticateToken, (req, res) => {
-    const email = req.user.email;
-    db.all('SELECT * FROM complaints WHERE user_email = ? ORDER BY submitted_at DESC', [email], (err, rows) => {
+    const mobile = req.user.mobile;
+    db.all('SELECT * FROM complaints WHERE user_mobile = ? ORDER BY submitted_at DESC', [mobile], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         res.json(rows);
     });
@@ -233,15 +190,15 @@ app.get('/api/user/complaints', authenticateToken, (req, res) => {
 // 1. Book an appointment (Protected)
 app.post('/api/appointments', authenticateToken, (req, res) => {
     const { date, time, counselor } = req.body;
-    const email = req.user.email;
+    const mobile = req.user.mobile;
 
     if (!date || !time) {
         return res.status(400).json({ error: 'Date and time are required.' });
     }
 
     db.run(
-        'INSERT INTO appointments (user_email, counselor, date, time) VALUES (?, ?, ?, ?)',
-        [email, counselor || 'Unassigned', date, time],
+        'INSERT INTO appointments (user_mobile, counselor, date, time) VALUES (?, ?, ?, ?)',
+        [mobile, counselor || 'Unassigned', date, time],
         function (err) {
             if (err) return res.status(500).json({ error: 'Failed to book appointment.' });
             res.status(201).json({ message: 'Appointment Confirmed.', id: this.lastID });
@@ -251,8 +208,8 @@ app.post('/api/appointments', authenticateToken, (req, res) => {
 
 // 2. Fetch user's appointments (Protected)
 app.get('/api/user/appointments', authenticateToken, (req, res) => {
-    const email = req.user.email;
-    db.all('SELECT * FROM appointments WHERE user_email = ? ORDER BY booked_at DESC', [email], (err, rows) => {
+    const mobile = req.user.mobile;
+    db.all('SELECT * FROM appointments WHERE user_mobile = ? ORDER BY booked_at DESC', [mobile], (err, rows) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         res.json(rows);
     });
